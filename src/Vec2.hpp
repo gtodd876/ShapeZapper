@@ -16,10 +16,47 @@ public:
     T x() const { return m_x; }
     T y() const { return m_y; }
     bool operator==(Vec2<T>) const;
+    bool operator!=(Vec2<T>) const;
+    Vec2<T> operator+(const Vec2<T> &rhs);
+    Vec2<T> operator-(const Vec2<T> &rhs);
+    Vec2<T> operator*(const Vec2<T> &rhs);
+    Vec2<T> operator/(const Vec2<T> &rhs);
+    // Vec2<T> length() { }
+    // Vec2<T> normalize() { }
 };
 
 template<typename T>
 bool Vec2<T>::operator==(const Vec2<T> rhs) const {
     return (m_x == rhs.x() && m_y == rhs.y());
 }
+
+template<typename T>
+bool Vec2<T>::operator!=(const Vec2<T> rhs) const {
+    return (m_x != rhs.x() || m_y != rhs.y());
+}
+
+template<typename T>
+Vec2<T> Vec2<T>::operator+(const Vec2<T> &rhs) {
+    Vec2<T> result{m_x + rhs.x(), m_y + rhs.y()};
+    return result;
+}
+
+template<typename T>
+Vec2<T> Vec2<T>::operator-(const Vec2<T> &rhs) {
+    Vec2<T> result{m_x - rhs.x(), m_y - rhs.y()};
+    return result;
+}
+
+template<typename T>
+Vec2<T> Vec2<T>::operator*(const Vec2<T> &rhs) {
+    Vec2<T> result{m_x * rhs.x(), m_y * rhs.y()};
+    return result;
+}
+
+template<typename T>
+Vec2<T> Vec2<T>::operator/(const Vec2<T> &rhs) {
+    Vec2<T> result{m_x / rhs.x(), m_y / rhs.y()};
+    return result;
+}
+
 #endif // VEC2_HPP
