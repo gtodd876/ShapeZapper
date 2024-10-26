@@ -4,9 +4,12 @@
 
 #ifndef VEC2_HPP
 #define VEC2_HPP
+#include "SFML/System/Vector2.hpp"
+#include "SFML/Window/Keyboard.hpp"
 
 template<typename T>
-class Vec2 {
+class Vec2
+{
     T m_x{};
     T m_y{};
 
@@ -23,40 +26,50 @@ public:
     Vec2<T> operator/(const Vec2<T> &rhs);
     // Vec2<T> length() { }
     // Vec2<T> normalize() { }
+    explicit Vec2(const sf::Vector2f<T> &vec) : m_x(vec.x), m_y(vec.y){};
+    explicit operator sf::Vector2f<T>() const { return sf::Vector2f<T>(m_x, m_y); }
 };
 
+
 template<typename T>
-bool Vec2<T>::operator==(const Vec2<T> rhs) const {
+bool Vec2<T>::operator==(const Vec2<T> rhs) const
+{
     return (m_x == rhs.x() && m_y == rhs.y());
 }
 
 template<typename T>
-bool Vec2<T>::operator!=(const Vec2<T> rhs) const {
+bool Vec2<T>::operator!=(const Vec2<T> rhs) const
+{
     return (m_x != rhs.x() || m_y != rhs.y());
 }
 
 template<typename T>
-Vec2<T> Vec2<T>::operator+(const Vec2<T> &rhs) {
+Vec2<T> Vec2<T>::operator+(const Vec2<T> &rhs)
+{
     Vec2<T> result{m_x + rhs.x(), m_y + rhs.y()};
     return result;
 }
 
 template<typename T>
-Vec2<T> Vec2<T>::operator-(const Vec2<T> &rhs) {
+Vec2<T> Vec2<T>::operator-(const Vec2<T> &rhs)
+{
     Vec2<T> result{m_x - rhs.x(), m_y - rhs.y()};
     return result;
 }
 
 template<typename T>
-Vec2<T> Vec2<T>::operator*(const Vec2<T> &rhs) {
+Vec2<T> Vec2<T>::operator*(const Vec2<T> &rhs)
+{
     Vec2<T> result{m_x * rhs.x(), m_y * rhs.y()};
     return result;
 }
 
 template<typename T>
-Vec2<T> Vec2<T>::operator/(const Vec2<T> &rhs) {
+Vec2<T> Vec2<T>::operator/(const Vec2<T> &rhs)
+{
     Vec2<T> result{m_x / rhs.x(), m_y / rhs.y()};
     return result;
 }
 
+using Vec2f = Vec2<float>;
 #endif // VEC2_HPP

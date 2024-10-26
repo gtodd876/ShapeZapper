@@ -35,7 +35,12 @@ FetchContent_Declare(ImGui-SFML
 FetchContent_MakeAvailable(ImGui-SFML)
 
 add_executable(main src/main.cpp
-        src/Vec2.hpp)
+        src/Vec2.hpp
+        src/Component.hpp
+        src/Entity.hpp
+        src/EntityManager.hpp
+        src/Game.cpp
+        src/Game.h)
 target_link_libraries(main PRIVATE sfml-graphics sfml-window sfml-audio sfml-network sfml-system ImGui-SFML::ImGui-SFML)
 target_compile_features(main PRIVATE cxx_std_20)
 
