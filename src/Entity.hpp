@@ -22,7 +22,7 @@ class Entity : public Component
     std::string m_tag{"default"};
     size_t m_id{0};
 
-    Entity(const size_t &id, std::string& tag) : m_tag(tag), m_id(id) {}
+    Entity(const size_t &id, const std::string &tag) : m_tag(tag), m_id(id) {}
 
 public:
     bool isActive() const { return m_Active; }
@@ -31,26 +31,31 @@ public:
     const std::string &getTag() const { return m_tag; }
 
     template<typename T>
-    bool has() const {
+    bool has() const
+    {
         return get<T>().exists;
     }
     template<typename T, typename... TArgs>
-    T &add(TArgs &&...mArgs) {
+    T &add(TArgs &&...mArgs)
+    {
         auto &component = get<T>();
         component = T(std::forward<TArgs>(mArgs)...);
         component.exists = true;
         return component;
     }
     template<typename T>
-    T &get() {
+    T &get()
+    {
         return std::get<T>(m_components);
     }
     template<typename T>
-    const T &get() const {
+    const T &get() const
+    {
         return std::get<T>(m_components);
     }
     template<typename T>
-    void remove() {
+    void remove()
+    {
         get<T>() = T();
     }
 };
