@@ -16,27 +16,39 @@ class EntityManager
     std::map<std::string, EntityVec> m_entityMap;
     size_t m_totalEntities{0};
 
-    void removeDeadEntities(EntityVec &vec){
-            // TODO: remove all dead entities from the input vector this is called by the update() function
+    void removeDeadEntities(EntityVec &vec)
+    {
+        std::erase_if(vec, [](std::shared_ptr<Entity> e) { return !e->isActive(); });
     };
 
 public:
     EntityManager() = default;
     void update()
     {
-        // TODO: add entities from m_entitiesToAdd to the proper locations
-        // add them to the vector of all entities
-        // add them to the vector inside the map, with the tag as the key
-
+        for (auto &entity: m_entities_to_add)
+        {
+            // add them to the vector of all entities
+            m_entities.push_back(entity);
+            // add them to the vector inside the map, with the tag as the key
+            m_entityMap[entity->m_tag].push_back(entity);
+        }
+        if (!m_entities.empty())
+        {
+            removeDeadEntities(m_entities);
+        }
         // move the dead entities from the vector of all entities
-        removeDeadEntities(m_entities);
 
         // also removing dead entities from the entity map
         // C++ 20 way of iterating through [key, value] pairs in a map
         for (auto &[tag, entityVec]: m_entityMap)
         {
-            removeDeadEntities(entityVec);
+            if (!entityVec.empty())
+            {
+                removeDeadEntities(entityVec);
+            }
         }
+
+        m_entities_to_add.clear();
     }
 
     std::shared_ptr<Entity> addEntity(const std::string &tag)

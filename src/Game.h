@@ -26,6 +26,8 @@ class Game
 {
     sf::RenderWindow m_window;
     EntityManager m_entities;
+    bool m_paused{false};
+    bool m_running{true};
     sf::Font m_font;
     sf::Text m_text;
     PlayerConfig m_playerConfig;
@@ -35,14 +37,12 @@ class Game
     int m_score{0};
     int m_currentFrame{0};
     int m_lastEnemySpawnTime{0};
-    bool m_paused{false};
-    bool m_running{false};
 
     void init(const std::string &config);
     void setPaused(bool paused);
 
     void sMovement();
-    void userInput();
+    void sUserInput();
     void sLifeSpan();
     void sRender();
     void sGUI();

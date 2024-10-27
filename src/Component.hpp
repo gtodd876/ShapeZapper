@@ -19,6 +19,7 @@ class CTransform : public Component
 public:
     Vec2f pos = {0.0, 0.0};
     Vec2f velocity = {0.0, 0.0};
+    // scale ?
     float angle = 0.0;
 
     CTransform() = default;
@@ -32,7 +33,8 @@ public:
 
     CShape() = default;
     CShape(const float radius, const size_t points, const sf::Color &fill, const sf::Color &outline,
-           const float thickness) : circle(radius, points) {
+           const float thickness) : circle(radius, points)
+    {
         circle.setFillColor(fill);
         circle.setOutlineColor(outline);
         circle.setOutlineThickness(thickness);

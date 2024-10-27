@@ -4,18 +4,21 @@
 
 #ifndef VEC2_HPP
 #define VEC2_HPP
-#include "SFML/System/Vector2.hpp"
-#include "SFML/Window/Keyboard.hpp"
+#include <math.h>
+#include "SFML/Graphics.hpp"
 
 template<typename T>
 class Vec2
 {
-    T m_x{};
-    T m_y{};
-
 public:
+    T m_x{0};
+    T m_y{0};
+
     Vec2() = default;
     Vec2(const T &x, const T &y) : m_x{x}, m_y{y} {};
+    Vec2(const sf::Vector2<T> &vec) : m_x(vec.x), m_y(vec.y){};
+    operator sf::Vector2<T>() { return sf::Vector2<T>(m_x, m_y); };
+
     T x() const { return m_x; }
     T y() const { return m_y; }
     bool operator==(Vec2<T>) const;
@@ -26,8 +29,6 @@ public:
     Vec2<T> operator/(const Vec2<T> &rhs);
     // Vec2<T> length() { }
     // Vec2<T> normalize() { }
-    explicit Vec2(const sf::Vector2f<T> &vec) : m_x(vec.x), m_y(vec.y){};
-    explicit operator sf::Vector2f<T>() const { return sf::Vector2f<T>(m_x, m_y); }
 };
 
 
@@ -70,6 +71,6 @@ Vec2<T> Vec2<T>::operator/(const Vec2<T> &rhs)
     Vec2<T> result{m_x / rhs.x(), m_y / rhs.y()};
     return result;
 }
-
 using Vec2f = Vec2<float>;
+
 #endif // VEC2_HPP
