@@ -3,11 +3,11 @@
 //
 
 #include "Game.h"
-
 #include <fstream>
 #include <imgui-SFML.h>
 #include <imgui.h>
 #include <iostream>
+#include "Vec2.hpp"
 
 Game::Game(const std::string &config) { init(config); }
 
@@ -109,7 +109,8 @@ void Game::spawnPlayer()
             Vec2f(static_cast<float>(m_window.getSize().x) / 2.0f, static_cast<float>(m_window.getSize().y) / 2.0f),
             Vec2f(0.0f, 0.0f), 0.0f);
 
-    entity->add<CShape>(m_playerConfig.SR, 8, sf::Color(m_playerConfig.FR, m_playerConfig.FG, m_playerConfig.FB),
+    entity->add<CShape>(m_playerConfig.SR, m_playerConfig.V,
+                        sf::Color(m_playerConfig.FR, m_playerConfig.FG, m_playerConfig.FB),
                         sf::Color(m_playerConfig.OR, m_playerConfig.OG, m_playerConfig.OB), m_playerConfig.OT);
 
     entity->add<CInput>();
@@ -118,24 +119,15 @@ void Game::spawnPlayer()
 void Game::spawnEnemy()
 {
     auto entity = m_entities.addEntity("enemy");
-    // r = min + (rand() % (1 + max - min))
-    // [-3, 3]
-    // r = -3 + (rand() % (1 + 3 - -3)
     srand(time(nullptr));
     const unsigned int pos_x =
             m_enemyConfig.SR + (rand() % (1 + (m_window.getSize().x - m_enemyConfig.SR) - m_enemyConfig.SR));
     const unsigned int pos_y =
             m_enemyConfig.SR + (rand() % (1 + (m_window.getSize().y - m_enemyConfig.SR) - m_enemyConfig.SR));
-    std::cout << "pos_x: " << pos_x << '\n';
-    std::cout << "pos_y: " << pos_y << '\n';
-    std::cout << "-m_enemyConfig.SMIN " << -m_enemyConfig.SMIN << '\n';
-    std::cout << "-m_enemyConfig.SMAX " << -m_enemyConfig.SMAX << '\n';
     const int vel_x = rand() % static_cast<int>(m_enemyConfig.SMAX + m_enemyConfig.SMIN + 1) -
                       static_cast<int>(m_enemyConfig.SMIN);
     const int vel_y = rand() % static_cast<int>(m_enemyConfig.SMAX + m_enemyConfig.SMIN + 1) -
                       static_cast<int>(m_enemyConfig.SMIN);
-    std::cout << "vel_x: " << vel_x << '\n';
-    std::cout << "vel_y: " << vel_y << '\n';
     entity->add<CTransform>(Vec2f(static_cast<float>(pos_x), static_cast<float>(pos_y)),
                             Vec2f(static_cast<float>(vel_x), static_cast<float>(vel_y)), 2.0f);
     const unsigned int num_of_points = m_enemyConfig.VMIN + (rand() % (1 + m_enemyConfig.VMAX - m_enemyConfig.VMIN));
@@ -143,15 +135,9 @@ void Game::spawnEnemy()
     const unsigned int outline_red = rand() % 256;
     const unsigned int outline_green = rand() % 256;
     const unsigned int outline_blue = rand() % 256;
-    std::cout << "outline_red " << outline_red << " outline_green " << outline_green << " outline_blue "
-              << outline_blue;
     entity->add<CShape>(m_enemyConfig.SR, num_of_points, sf::Color::Black,
                         sf::Color(outline_red, outline_green, outline_blue), m_enemyConfig.OT);
 
-    // record when the most recent enemy was spawned
-    // std::cout << "In spawn enemy: "
-    //           << "m_lastEnemySpawnTime " << m_lastEnemySpawnTime << " m_currentFrame " << m_currentFrame <<
-    //           std::endl;
     m_lastEnemySpawnTime = m_currentFrame;
 }
 
@@ -161,11 +147,34 @@ void Game::spawnSmallEnemies(std::shared_ptr<Entity> e)
     // when we create the smaller enemy, we have to read the values of the
 }
 
-void Game::spawnBullet(std::shared_ptr<Entity> entity, const Vec2f &target)
+void Game::spawnBullet(const std::shared_ptr<Entity> &entity, const Vec2f &mousePos)
 {
-    // TODO: implement the spawning of a bullet that travels toward target
-    // bullet speed is given as a scalar speed
-    // you must set the velocity by using the formula in notes
+
+    // entity passed in is the player entity, target is where you clicked with the mouse
+    // calc the velocity vector of where that bullet should be traveling
+    // mouse (mx, my) Player (px, py)
+    // (mx-px, my-py) = Difference D, D has some length L but we want to be speed S
+    // keep the angle but change the magnitude
+
+    const auto vec_sub_x = mousePos.m_x - entity->get<CTransform>().pos.m_x;
+    const auto vec_sub_y = mousePos.m_y - entity->get<CTransform>().pos.m_y;
+    std::cout << "vec_sub_x" << vec_sub_x << ", "
+              << "vec_sub_y" << vec_sub_y << '\n';
+    const auto vec_sub = Vec2f{vec_sub_x, vec_sub_y};
+    auto distance = sqrt(vec_sub.m_x * vec_sub.m_x + vec_sub.m_y * vec_sub.m_y);
+    // auto target_mag = sqrt(mousePos.m_x * mousePos.m_x + mousePos.m_y * mousePos.m_y);
+    auto normalized_x = vec_sub.m_x * (1.0f / distance);
+    auto normalized_y = vec_sub.m_y * (1.0f / distance);
+    auto normalized = Vec2f{normalized_x, normalized_y};
+    auto norm_mult_scalar_x = normalized.m_x * m_bulletConfig.S;
+    auto norm_mult_scalar_y = normalized.m_y * m_bulletConfig.S;
+    auto vec_trajectory = Vec2f{norm_mult_scalar_x, norm_mult_scalar_y};
+    auto bullet = m_entities.addEntity("bullet");
+    std::cout << "vec trajectory is: " << vec_trajectory.m_x << ", " << vec_trajectory.m_y << std::endl;
+    bullet->add<CShape>(m_bulletConfig.SR, m_bulletConfig.V,
+                        sf::Color(m_bulletConfig.FR, m_bulletConfig.FG, m_bulletConfig.FB),
+                        sf::Color(m_bulletConfig.OR, m_bulletConfig.OG, m_bulletConfig.OB), m_bulletConfig.OT);
+    bullet->add<CTransform>(entity->get<CTransform>().pos, vec_trajectory, 0.0f);
 }
 
 void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
@@ -175,39 +184,58 @@ void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
 
 void Game::sMovement()
 {
-    // TODO: implement all entity movement in this function
     auto &player = m_entities.getEntitiesByTag("player").front();
     if (player->get<CInput>().up == true)
     {
         auto &transform = player->get<CTransform>();
-        transform.pos.m_y = transform.pos.m_y - 3.0f;
+        transform.pos.m_y = transform.pos.m_y - m_playerConfig.S;
         player->get<CShape>().circle.setPosition(transform.pos);
     }
     if (player->get<CInput>().down == true)
     {
         auto &transform = player->get<CTransform>();
-        transform.pos.m_y = transform.pos.m_y + 3.0f;
+        transform.pos.m_y = transform.pos.m_y + m_playerConfig.S;
         player->get<CShape>().circle.setPosition(transform.pos);
     }
     if (player->get<CInput>().left == true)
     {
         auto &transform = player->get<CTransform>();
-        transform.pos.m_x = transform.pos.m_x - 3.0f;
+        transform.pos.m_x = transform.pos.m_x - m_playerConfig.S;
         player->get<CShape>().circle.setPosition(transform.pos);
     }
     if (player->get<CInput>().right == true)
     {
         auto &transform = player->get<CTransform>();
-        transform.pos.m_x = transform.pos.m_x + 3.0f;
+        transform.pos.m_x = transform.pos.m_x + m_playerConfig.S;
         player->get<CShape>().circle.setPosition(transform.pos);
     }
     auto &enemies = m_entities.getEntitiesByTag("enemy");
-    for (auto e: enemies)
+    for (const auto &e: enemies)
+    {
+        auto &transform = e->get<CTransform>();
+        // wall bounce logic
+        if (e->get<CShape>().circle.getGlobalBounds().left < 0.0f ||
+            e->get<CShape>().circle.getGlobalBounds().left >
+                    static_cast<float>(m_window.getSize().x) - e->get<CShape>().circle.getRadius() * 2.0f)
+        {
+            transform.velocity.m_x = transform.velocity.m_x * -1.0f;
+        }
+        if (e->get<CShape>().circle.getGlobalBounds().top < 0.0f ||
+            e->get<CShape>().circle.getGlobalBounds().top >
+                    static_cast<float>(m_window.getSize().y) - e->get<CShape>().circle.getRadius() * 2.0f)
+        {
+            transform.velocity.m_y = transform.velocity.m_y * -1.0f;
+        }
+        transform.pos.m_x = transform.pos.m_x + transform.velocity.m_x;
+        transform.pos.m_y = transform.pos.m_y + transform.velocity.m_y;
+        e->get<CShape>().circle.setPosition(transform.pos);
+    }
+    auto &bullets = m_entities.getEntitiesByTag("bullet");
+    for (const auto &e: bullets)
     {
         auto &transform = e->get<CTransform>();
         transform.pos.m_x = transform.pos.m_x + transform.velocity.m_x;
         transform.pos.m_y = transform.pos.m_y + transform.velocity.m_y;
-        e->get<CShape>().circle.setPosition(transform.pos);
     }
 }
 
@@ -279,7 +307,12 @@ void Game::sRender()
         m_window.draw(e->get<CShape>().circle);
     }
     m_window.draw(player->get<CShape>().circle);
-
+    auto bullets = m_entities.getEntitiesByTag("bullet");
+    for (auto &e: bullets)
+    {
+        e->get<CShape>().circle.setPosition(e->get<CTransform>().pos);
+        m_window.draw(e->get<CShape>().circle);
+    }
     // draw the UI last
     ImGui::SFML::Render(m_window);
 
@@ -288,12 +321,7 @@ void Game::sRender()
 
 void Game::sUserInput()
 {
-    // TODO: handle user input here
-    // note that you should only be setting the player's input component variables here
-    // you should not implement the player's movement logic here
-    // the movement system will read the variables you set in the this function
-
-    sf::Event event;
+    sf::Event event{};
     while (m_window.pollEvent(event))
     {
         ImGui::SFML::ProcessEvent(m_window, event);
@@ -383,9 +411,10 @@ void Game::sUserInput()
             }
             if (event.mouseButton.button == sf::Mouse::Left)
             {
-                std::cout << "Left button was clicked at (" << event.mouseButton.x << ", " << event.mouseButton.y << ")"
-                          << '\n';
-                // call spawn bullet here
+                const auto player = m_entities.getEntitiesByTag("player").front();
+                auto target = Vec2f{static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y)};
+
+                spawnBullet(player, target);
             }
             if (event.mouseButton.button == sf::Mouse::Right)
             {

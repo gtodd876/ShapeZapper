@@ -23,7 +23,7 @@ public:
     float angle = 0.0;
 
     CTransform() = default;
-    CTransform(const Vec2f &p, const Vec2f &v, float a) : pos(p), velocity(v), angle(a) {}
+    CTransform(const Vec2f &p, const Vec2f &v, const float a) : pos(p), velocity(v), angle(a) {}
 };
 
 class CShape : public Component
