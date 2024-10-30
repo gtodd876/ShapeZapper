@@ -3,10 +3,12 @@
 //
 
 #include "Game.h"
+#include <__ranges/transform_view.h>
 #include <fstream>
 #include <imgui-SFML.h>
 #include <imgui.h>
 #include <iostream>
+
 #include "Vec2.hpp"
 
 Game::Game(const std::string &config) { init(config); }
@@ -73,7 +75,7 @@ std::shared_ptr<Entity> Game::player()
 
 void Game::run()
 {
-    // TODO: Add pause functionality here,
+
     // some systems should still run while paused, like rendering
     // some systems shouldn't - movement, input
 
@@ -87,17 +89,15 @@ void Game::run()
         sCollision();
         sUserInput();
         sGUI();
+        sLifeSpan();
         sRender();
         // increment current frame
-        // may need ot be moved when pause is implemented
+        // may need t0 be moved when pause is implemented
         m_currentFrame++;
     }
 }
 
-void Game::setPaused(bool paused)
-{
-    // TODO:
-}
+void Game::setPaused(bool paused) {}
 
 void Game::spawnPlayer()
 {
@@ -149,17 +149,9 @@ void Game::spawnSmallEnemies(std::shared_ptr<Entity> e)
 
 void Game::spawnBullet(const std::shared_ptr<Entity> &entity, const Vec2f &mousePos)
 {
-
-    // entity passed in is the player entity, target is where you clicked with the mouse
-    // calc the velocity vector of where that bullet should be traveling
-    // mouse (mx, my) Player (px, py)
-    // (mx-px, my-py) = Difference D, D has some length L but we want to be speed S
-    // keep the angle but change the magnitude
-
     const auto vec_sub_x = mousePos.m_x - entity->get<CTransform>().pos.m_x;
     const auto vec_sub_y = mousePos.m_y - entity->get<CTransform>().pos.m_y;
-    std::cout << "vec_sub_x" << vec_sub_x << ", "
-              << "vec_sub_y" << vec_sub_y << '\n';
+
     const auto vec_sub = Vec2f{vec_sub_x, vec_sub_y};
     auto distance = sqrt(vec_sub.m_x * vec_sub.m_x + vec_sub.m_y * vec_sub.m_y);
     // auto target_mag = sqrt(mousePos.m_x * mousePos.m_x + mousePos.m_y * mousePos.m_y);
@@ -170,11 +162,14 @@ void Game::spawnBullet(const std::shared_ptr<Entity> &entity, const Vec2f &mouse
     auto norm_mult_scalar_y = normalized.m_y * m_bulletConfig.S;
     auto vec_trajectory = Vec2f{norm_mult_scalar_x, norm_mult_scalar_y};
     auto bullet = m_entities.addEntity("bullet");
-    std::cout << "vec trajectory is: " << vec_trajectory.m_x << ", " << vec_trajectory.m_y << std::endl;
+
     bullet->add<CShape>(m_bulletConfig.SR, m_bulletConfig.V,
-                        sf::Color(m_bulletConfig.FR, m_bulletConfig.FG, m_bulletConfig.FB),
-                        sf::Color(m_bulletConfig.OR, m_bulletConfig.OG, m_bulletConfig.OB), m_bulletConfig.OT);
+                        sf::Color(m_bulletConfig.FR, m_bulletConfig.FG, m_bulletConfig.FB, 255),
+                        sf::Color(m_bulletConfig.OR, m_bulletConfig.OG, m_bulletConfig.OB, 255), m_bulletConfig.OT);
     bullet->add<CTransform>(entity->get<CTransform>().pos, vec_trajectory, 0.0f);
+    bullet->add<CLifeSpan>(m_bulletConfig.L);
+    bullet->get<CShape>().circle.setOrigin(bullet->get<CShape>().circle.getRadius(),
+                                           bullet->get<CShape>().circle.getRadius());
 }
 
 void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
@@ -188,13 +183,27 @@ void Game::sMovement()
     if (player->get<CInput>().up == true)
     {
         auto &transform = player->get<CTransform>();
-        transform.pos.m_y = transform.pos.m_y - m_playerConfig.S;
+        if (player->get<CInput>().left == true || player->get<CInput>().right == true)
+        {
+            transform.pos.m_y = transform.pos.m_y - m_playerConfig.S / 2.f;
+        }
+        else
+        {
+            transform.pos.m_y = transform.pos.m_y - m_playerConfig.S;
+        }
         player->get<CShape>().circle.setPosition(transform.pos);
     }
     if (player->get<CInput>().down == true)
     {
         auto &transform = player->get<CTransform>();
-        transform.pos.m_y = transform.pos.m_y + m_playerConfig.S;
+        if (player->get<CInput>().left == true || player->get<CInput>().right == true)
+        {
+            transform.pos.m_y = transform.pos.m_y + m_playerConfig.S / 2.f;
+        }
+        else
+        {
+            transform.pos.m_y = transform.pos.m_y + m_playerConfig.S;
+        }
         player->get<CShape>().circle.setPosition(transform.pos);
     }
     if (player->get<CInput>().left == true)
@@ -241,14 +250,36 @@ void Game::sMovement()
 
 void Game::sLifeSpan()
 {
-    // TODO: implement all lifespan functionality
-    //
-    // for all entities
-    // if entity has no lifespan component , skip it
-    // if entity has > 0 lifespan then subtract 1
-    // if it has lifespan and is alive
-    // scale its alpha channel appropriately
-    // if it has lifespan and its time is up, destroy the entity
+    auto bullets = m_entities.getEntitiesByTag("bullet");
+    for (const auto &e: bullets)
+    {
+        if (e->get<CLifeSpan>().remaining > 0)
+        {
+            e->get<CLifeSpan>().remaining -= 1;
+
+            auto alpha = e->get<CShape>().circle.getFillColor().a;
+            if (alpha > 15)
+            {
+                alpha -= 15;
+                // std::cout << "alpha: " << std::to_string(alpha) << std::endl;
+                // std::cout << "remaining LS: " << std::to_string(e->get<CLifeSpan>().remaining) << std::endl;
+                std::cout << "alpha: " << std::to_string(alpha) << std::endl;
+                e->get<CShape>().circle.setFillColor(
+                        sf::Color(m_bulletConfig.FR, m_bulletConfig.FG, m_bulletConfig.FB, alpha));
+                e->get<CShape>().circle.setOutlineColor(
+                        sf::Color(m_bulletConfig.OR, m_bulletConfig.OG, m_bulletConfig.OB, alpha));
+            }
+            else
+            {
+                e->destroy();
+            }
+            // if entity has no lifespan component , skip it
+            // if entity has > 0 lifespan then subtract 1
+            // if it has lifespan and is alive
+            // scale its alpha channel appropriately
+            // if it has lifespan and its time is up, destroy the entity
+        }
+    }
 }
 
 void Game::sCollision()
@@ -256,12 +287,25 @@ void Game::sCollision()
     // TODO: implement all the proper collision between entities
     // be sure to use the collision radius, NOT the shape radius
     // sample
-    // for (auto b: m_entities.getEntities("bullet"))
-    // {
-    //     for (auto e: m_entities.getEntities("enemy"))
-    //     {
-    //          // detect collision
-    //     }
+    for (const auto &b: m_entities.getEntitiesByTag("bullet"))
+    {
+        for (const auto &e: m_entities.getEntitiesByTag("enemy"))
+        {
+            const auto b_x = b->get<CShape>().circle.getPosition().x;
+            const auto b_y = b->get<CShape>().circle.getPosition().y;
+            const auto e_x = e->get<CShape>().circle.getPosition().x;
+            const auto e_y = e->get<CShape>().circle.getPosition().y;
+
+            const auto dist1 = sqrt((e_x - b_x) * (e_x - b_x) + (e_y - b_y) * (e_y - b_y));
+            const auto b_radius = b->get<CShape>().circle.getRadius();
+            const auto e_radius = e->get<CShape>().circle.getRadius();
+            if (dist1 <= b_radius + e_radius)
+            {
+                b->destroy();
+                e->destroy();
+            }
+        }
+    }
     //     for (auto e: m_entities.getEntities("small-enemy"))
     //     {
     //          // detect collision
