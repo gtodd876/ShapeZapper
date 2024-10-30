@@ -3,7 +3,6 @@
 //
 
 #include "Game.h"
-#include <__ranges/transform_view.h>
 #include <fstream>
 #include <imgui-SFML.h>
 #include <imgui.h>
@@ -67,9 +66,6 @@ void Game::init(const std::string &path)
 std::shared_ptr<Entity> Game::player()
 {
     auto &players = m_entities.getEntitiesByTag("player");
-
-    // assert(players.size() == 1);
-
     return players.front();
 }
 
@@ -88,8 +84,8 @@ void Game::run()
         sMovement();
         sCollision();
         sUserInput();
-        sGUI();
         sLifeSpan();
+        sGUI();
         sRender();
         // increment current frame
         // may need t0 be moved when pause is implemented
@@ -179,11 +175,10 @@ void Game::spawnSpecialWeapon(std::shared_ptr<Entity> entity)
 
 void Game::sMovement()
 {
-    auto &player = m_entities.getEntitiesByTag("player").front();
-    if (player->get<CInput>().up == true)
+    if (Game::player()->get<CInput>().up == true)
     {
-        auto &transform = player->get<CTransform>();
-        if (player->get<CInput>().left == true || player->get<CInput>().right == true)
+        auto &transform = player()->get<CTransform>();
+        if (player()->get<CInput>().left == true || player()->get<CInput>().right == true)
         {
             transform.pos.m_y = transform.pos.m_y - m_playerConfig.S / 2.f;
         }
@@ -191,12 +186,12 @@ void Game::sMovement()
         {
             transform.pos.m_y = transform.pos.m_y - m_playerConfig.S;
         }
-        player->get<CShape>().circle.setPosition(transform.pos);
+        player()->get<CShape>().circle.setPosition(transform.pos);
     }
-    if (player->get<CInput>().down == true)
+    if (player()->get<CInput>().down == true)
     {
-        auto &transform = player->get<CTransform>();
-        if (player->get<CInput>().left == true || player->get<CInput>().right == true)
+        auto &transform = player()->get<CTransform>();
+        if (player()->get<CInput>().left == true || player()->get<CInput>().right == true)
         {
             transform.pos.m_y = transform.pos.m_y + m_playerConfig.S / 2.f;
         }
@@ -204,19 +199,19 @@ void Game::sMovement()
         {
             transform.pos.m_y = transform.pos.m_y + m_playerConfig.S;
         }
-        player->get<CShape>().circle.setPosition(transform.pos);
+        player()->get<CShape>().circle.setPosition(transform.pos);
     }
-    if (player->get<CInput>().left == true)
+    if (player()->get<CInput>().left == true)
     {
-        auto &transform = player->get<CTransform>();
+        auto &transform = player()->get<CTransform>();
         transform.pos.m_x = transform.pos.m_x - m_playerConfig.S;
-        player->get<CShape>().circle.setPosition(transform.pos);
+        player()->get<CShape>().circle.setPosition(transform.pos);
     }
-    if (player->get<CInput>().right == true)
+    if (player()->get<CInput>().right == true)
     {
-        auto &transform = player->get<CTransform>();
+        auto &transform = player()->get<CTransform>();
         transform.pos.m_x = transform.pos.m_x + m_playerConfig.S;
-        player->get<CShape>().circle.setPosition(transform.pos);
+        player()->get<CShape>().circle.setPosition(transform.pos);
     }
     auto &enemies = m_entities.getEntitiesByTag("enemy");
     for (const auto &e: enemies)
@@ -261,9 +256,6 @@ void Game::sLifeSpan()
             if (alpha > 15)
             {
                 alpha -= 15;
-                // std::cout << "alpha: " << std::to_string(alpha) << std::endl;
-                // std::cout << "remaining LS: " << std::to_string(e->get<CLifeSpan>().remaining) << std::endl;
-                std::cout << "alpha: " << std::to_string(alpha) << std::endl;
                 e->get<CShape>().circle.setFillColor(
                         sf::Color(m_bulletConfig.FR, m_bulletConfig.FG, m_bulletConfig.FB, alpha));
                 e->get<CShape>().circle.setOutlineColor(
@@ -273,20 +265,12 @@ void Game::sLifeSpan()
             {
                 e->destroy();
             }
-            // if entity has no lifespan component , skip it
-            // if entity has > 0 lifespan then subtract 1
-            // if it has lifespan and is alive
-            // scale its alpha channel appropriately
-            // if it has lifespan and its time is up, destroy the entity
         }
     }
 }
 
 void Game::sCollision()
 {
-    // TODO: implement all the proper collision between entities
-    // be sure to use the collision radius, NOT the shape radius
-    // sample
     for (const auto &b: m_entities.getEntitiesByTag("bullet"))
     {
         for (const auto &e: m_entities.getEntitiesByTag("enemy"))
@@ -304,6 +288,21 @@ void Game::sCollision()
                 b->destroy();
                 e->destroy();
             }
+        }
+    }
+    for (const auto &e: m_entities.getEntitiesByTag("enemy"))
+    {
+        const auto player_x = player()->get<CShape>().circle.getPosition().x;
+        const auto player_y = player()->get<CShape>().circle.getPosition().y;
+        const auto e_x = e->get<CShape>().circle.getPosition().x;
+        const auto e_y = e->get<CShape>().circle.getPosition().y;
+        const auto dist1 = sqrt((e_x - player_x) * (e_x - player_x) + (e_y - player_y) * (e_y - player_y));
+        const auto player_radius = player()->get<CShape>().circle.getRadius();
+        const auto e_radius = e->get<CShape>().circle.getRadius();
+        if (dist1 <= player_radius + e_radius)
+        {
+            player()->destroy();
+            spawnPlayer();
         }
     }
     //     for (auto e: m_entities.getEntities("small-enemy"))
@@ -331,17 +330,12 @@ void Game::sGUI()
 
 void Game::sRender()
 {
-    // TODO: change all of the code below to render all the entities
-    // sample drawing of the player entity that we have created
     m_window.clear(sf::Color::Black);
 
-    // TODO: use for loop to loop over all the entities
-    auto &p = m_entities.getEntitiesByTag("player");
-    auto &player = p.front();
-    player->get<CShape>().circle.setPosition(player->get<CTransform>().pos);
-    player->get<CTransform>().angle += 1.0f;
-    player->get<CShape>().circle.setRotation(player->get<CTransform>().angle);
-    // TODO: render enemies
+    player()->get<CShape>().circle.setPosition(player()->get<CTransform>().pos);
+    player()->get<CTransform>().angle += 1.0f;
+    player()->get<CShape>().circle.setRotation(player()->get<CTransform>().angle);
+
     auto &enemies = m_entities.getEntitiesByTag("enemy");
     for (auto &e: enemies)
     {
@@ -350,7 +344,7 @@ void Game::sRender()
         e->get<CShape>().circle.setRotation(e->get<CTransform>().angle);
         m_window.draw(e->get<CShape>().circle);
     }
-    m_window.draw(player->get<CShape>().circle);
+    m_window.draw(player()->get<CShape>().circle);
     auto bullets = m_entities.getEntitiesByTag("bullet");
     for (auto &e: bullets)
     {
@@ -381,26 +375,23 @@ void Game::sUserInput()
             {
                 case sf::Keyboard::W:
                 {
-                    auto &player = m_entities.getEntitiesByTag("player").front();
-                    player->get<CInput>().up = true;
+                    player()->get<CInput>().up = true;
                     break;
                 }
                 case sf::Keyboard::A:
                 {
-                    auto &player = m_entities.getEntitiesByTag("player").front();
-                    player->get<CInput>().left = true;
+
+                    player()->get<CInput>().left = true;
                     break;
                 }
                 case sf::Keyboard::S:
                 {
-                    auto &player = m_entities.getEntitiesByTag("player").front();
-                    player->get<CInput>().down = true;
+                    player()->get<CInput>().down = true;
                     break;
                 }
                 case sf::Keyboard::D:
                 {
-                    auto &player = m_entities.getEntitiesByTag("player").front();
-                    player->get<CInput>().right = true;
+                    player()->get<CInput>().right = true;
                     break;
                 }
                 case sf::Keyboard::Escape:
@@ -420,26 +411,22 @@ void Game::sUserInput()
             {
                 case sf::Keyboard::W:
                 {
-                    auto &player = m_entities.getEntitiesByTag("player").front();
-                    player->get<CInput>().up = false;
+                    player()->get<CInput>().up = false;
                     break;
                 }
                 case sf::Keyboard::A:
                 {
-                    auto &player = m_entities.getEntitiesByTag("player").front();
-                    player->get<CInput>().left = false;
+                    player()->get<CInput>().left = false;
                     break;
                 }
                 case sf::Keyboard::S:
                 {
-                    auto &player = m_entities.getEntitiesByTag("player").front();
-                    player->get<CInput>().down = false;
+                    player()->get<CInput>().down = false;
                     break;
                 }
                 case sf::Keyboard::D:
                 {
-                    auto &player = m_entities.getEntitiesByTag("player").front();
-                    player->get<CInput>().right = false;
+                    player()->get<CInput>().right = false;
                     break;
                 }
                 default:
@@ -455,10 +442,9 @@ void Game::sUserInput()
             }
             if (event.mouseButton.button == sf::Mouse::Left)
             {
-                const auto player = m_entities.getEntitiesByTag("player").front();
                 auto target = Vec2f{static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y)};
 
-                spawnBullet(player, target);
+                spawnBullet(player(), target);
             }
             if (event.mouseButton.button == sf::Mouse::Right)
             {
